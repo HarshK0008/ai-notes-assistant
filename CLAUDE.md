@@ -40,3 +40,6 @@ having behavior hardcoded — check it before assuming a convention.
 - Server-only code (Prisma client, `GROQ_API_KEY` usage) must never be imported
   into a client component.
 - Never commit `.env` — `GROQ_API_KEY` and `DATABASE_URL` live there.
+- **IMPORTANT:** Do not add Claude/AI attribution (e.g. `Co-Authored-By: Claude`,
+  "Generated with Claude Code") to commit messages, PR descriptions, or any
+  other output in this repo.
