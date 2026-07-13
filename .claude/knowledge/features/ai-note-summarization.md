@@ -1,10 +1,13 @@
-# Current Feature: AI Note Summarization
+# AI Note Summarization
 
-## Status
+## Overview
 
-In Progress
+Generate a short AI summary of a note's content via Groq's OpenAI-compatible
+chat completions API, so a user can grasp a long note's gist without
+re-reading it. Follow-up feature layered on top of Note Management, using the
+`summary` field already reserved (but unpopulated) on the `Note` model.
 
-## Goals
+## Requirements
 
 - [ ] Server-only Groq client wrapper (e.g. `lib/groq.ts`) that calls the
       `chat/completions` endpoint with `GROQ_API_KEY`, never imported into a
@@ -22,27 +25,23 @@ In Progress
 
 ## Notes
 
-- `Note.summary` already exists in `prisma/schema.prisma` (nullable) — no
-  migration needed, just start writing to it
+- `Note.summary` already exists in `prisma/schema.prisma` (nullable) —
+  no migration needed, just start writing to it
 - Model: `llama-3.3-70b-versatile` (or current Groq free-tier equivalent) per
   `.claude/config/project.config.md`
-- No `groq-sdk`/`openai` package is installed yet — add one (or call `fetch`
-  directly against Groq's OpenAI-compatible endpoint) as part of
-  implementation
+- No `groq-sdk`/`openai` package is installed yet (`package.json` has no AI
+  dependency) — add one (or call `fetch` directly against Groq's
+  OpenAI-compatible endpoint) as part of implementation
 - `GROQ_API_KEY` must be added to `.env` (and documented in `.env.example`);
   never commit `.env`
 - Keep this feature scoped to summarization only — auto-tagging (`tags`
   field) is a separate follow-up feature, don't bundle it in here
 - Regenerating a summary should overwrite the previous one (no history)
-- Spec: `.claude/knowledge/features/ai-note-summarization.md`
 
-## History
+## References
 
-### Note Management (2026-07-08)
-
-Full CRUD for notes — Prisma `Note` model (SQLite), `POST/GET /api/notes`,
-`GET/PUT/DELETE /api/notes/[id]`, and a list/detail/new-note UI in Next.js.
-Server-side validation rejects empty title/content with 400; updating or
-deleting a missing note returns 404. Covered by 23 Vitest tests (CRUD logic
-+ API route status-code mapping). Spec:
-`.claude/knowledge/features/note-management.md`.
+- `.claude/knowledge/features/note-management.md` — establishes the `Note`
+  model and the `summary`/`tags` fields this feature populates
+- `.claude/knowledge/tech-stack.md` — Groq rationale and integration notes
+- `.claude/knowledge/data-model.md` — Note entity schema
+- `.claude/config/project.config.md` — AI provider/model configuration

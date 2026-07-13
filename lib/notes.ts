@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { summarizeText } from "@/lib/groq";
 
 export class ValidationError extends Error {}
 export class NotFoundError extends Error {}
@@ -50,4 +51,20 @@ export async function deleteNote(id: string) {
     throw new NotFoundError("Note not found");
   }
   return prisma.note.delete({ where: { id } });
+}
+
+export async function summarizeNote(id: string) {
+  const existing = await getNote(id);
+  if (!existing) {
+    throw new NotFoundError("Note not found");
+  }
+  if (!existing.content.trim()) {
+    // Unreachable via createNote/updateNote (both enforce non-empty content),
+    // but content can be mutated out-of-band (e.g. Prisma Studio) — this is
+    // the API's own boundary check, not just a defensive copy of the other one.
+    throw new ValidationError("Content is required");
+  }
+
+  const summary = await summarizeText(existing.content);
+  return prisma.note.update({ where: { id }, data: { summary } });
 }

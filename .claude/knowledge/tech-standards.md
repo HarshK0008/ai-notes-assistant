@@ -30,3 +30,15 @@ one file, not `coding-standards.md` or anything under `skills/`.
 
 - Tailwind utility classes go directly in JSX; extract a component only once
   a class combination repeats 3+ times
+
+## Client Components
+
+- Any async event handler that toggles a loading/submitting state (e.g.
+  `setSubmitting(true)`) must wrap its `fetch`/await logic in
+  try/catch/finally, with the state reset in `finally` — never after the
+  last awaited call. A rejected fetch (offline, DNS failure, timeout) must
+  not leave a button permanently disabled or an error silently swallowed.
+- When a component has multiple independent in-flight actions (e.g. Save,
+  Delete, Summarize), each action's button must disable on *any* of the
+  in-flight states, not just its own — otherwise two actions can race
+  against the same record.

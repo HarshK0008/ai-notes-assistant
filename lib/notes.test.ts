@@ -8,8 +8,16 @@ const mockNote = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 
+const mocks = vi.hoisted(() => ({
+  summarizeText: vi.fn(),
+}));
+
 vi.mock("@/lib/prisma", () => ({
   prisma: { note: mockNote },
+}));
+
+vi.mock("@/lib/groq", () => ({
+  summarizeText: mocks.summarizeText,
 }));
 
 import {
@@ -18,6 +26,7 @@ import {
   getNote,
   listNotes,
   NotFoundError,
+  summarizeNote,
   updateNote,
   validateNoteInput,
   ValidationError,
@@ -116,5 +125,42 @@ describe("deleteNote", () => {
     mockNote.findUnique.mockResolvedValue(null);
     await expect(deleteNote("missing")).rejects.toThrow(NotFoundError);
     expect(mockNote.delete).not.toHaveBeenCalled();
+  });
+});
+
+describe("summarizeNote", () => {
+  it("summarizes the note content and persists the result", async () => {
+    mockNote.findUnique.mockResolvedValue({ id: "1", content: "Some content" });
+    mocks.summarizeText.mockResolvedValue("A short summary.");
+    mockNote.update.mockResolvedValue({ id: "1", content: "Some content", summary: "A short summary." });
+
+    const result = await summarizeNote("1");
+
+    expect(mocks.summarizeText).toHaveBeenCalledWith("Some content");
+    expect(mockNote.update).toHaveBeenCalledWith({
+      where: { id: "1" },
+      data: { summary: "A short summary." },
+    });
+    expect(result).toEqual({ id: "1", content: "Some content", summary: "A short summary." });
+  });
+
+  it("throws NotFoundError when the note doesn't exist", async () => {
+    mockNote.findUnique.mockResolvedValue(null);
+    await expect(summarizeNote("missing")).rejects.toThrow(NotFoundError);
+    expect(mocks.summarizeText).not.toHaveBeenCalled();
+  });
+
+  it("throws ValidationError when the note has no content", async () => {
+    mockNote.findUnique.mockResolvedValue({ id: "1", content: "   " });
+    await expect(summarizeNote("1")).rejects.toThrow(ValidationError);
+    expect(mocks.summarizeText).not.toHaveBeenCalled();
+  });
+
+  it("propagates errors from the Groq wrapper without persisting", async () => {
+    mockNote.findUnique.mockResolvedValue({ id: "1", content: "Some content" });
+    mocks.summarizeText.mockRejectedValue(new Error("Groq API returned an error (status 429)"));
+
+    await expect(summarizeNote("1")).rejects.toThrow("Groq API returned an error (status 429)");
+    expect(mockNote.update).not.toHaveBeenCalled();
   });
 });
