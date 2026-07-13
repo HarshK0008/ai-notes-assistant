@@ -8,29 +8,45 @@ export function NoteDetail({ note }: { note: Note }) {
   const router = useRouter();
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
+  const [summary, setSummary] = useState(note.summary);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
+
+    if (summary && content !== note.content) {
+      const proceed = window.confirm(
+        "Saving will change this note's content. The existing summary won't update automatically and may no longer match. Continue?",
+      );
+      if (!proceed) {
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
 
-    const response = await fetch(`/api/notes/${note.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, content }),
-    });
+    try {
+      const response = await fetch(`/api/notes/${note.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
 
-    if (!response.ok) {
-      const body = await response.json();
-      setError(body.error ?? "Something went wrong");
+      if (!response.ok) {
+        const body = await response.json();
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+
+      router.refresh();
+    } catch {
+      setError("Something went wrong");
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    router.refresh();
-    setSubmitting(false);
   }
 
   async function handleDelete() {
@@ -41,17 +57,43 @@ export function NoteDetail({ note }: { note: Note }) {
     setSubmitting(true);
     setError(null);
 
-    const response = await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
+    try {
+      const response = await fetch(`/api/notes/${note.id}`, { method: "DELETE" });
 
-    if (!response.ok) {
-      const body = await response.json();
-      setError(body.error ?? "Something went wrong");
+      if (!response.ok) {
+        const body = await response.json();
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch {
+      setError("Something went wrong");
+    } finally {
       setSubmitting(false);
-      return;
     }
+  }
 
-    router.push("/");
-    router.refresh();
+  async function handleSummarize() {
+    setSummarizing(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/summarize`, { method: "POST" });
+      const body = await response.json();
+
+      if (!response.ok) {
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+
+      setSummary(body.summary);
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setSummarizing(false);
+    }
   }
 
   return (
@@ -60,7 +102,7 @@ export function NoteDetail({ note }: { note: Note }) {
         <h1 className="text-2xl font-semibold">Edit Note</h1>
         <button
           onClick={handleDelete}
-          disabled={submitting}
+          disabled={submitting || summarizing}
           className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
           Delete
@@ -92,12 +134,29 @@ export function NoteDetail({ note }: { note: Note }) {
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || summarizing}
           className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
         >
           Save Changes
         </button>
       </form>
+      <div className="mt-6 border-t border-gray-200 pt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-medium">Summary</h2>
+          <button
+            onClick={handleSummarize}
+            disabled={summarizing || submitting}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            {summarizing ? "Summarizing..." : "Summarize"}
+          </button>
+        </div>
+        {summary ? (
+          <p className="text-sm text-gray-700">{summary}</p>
+        ) : (
+          <p className="text-sm text-gray-400">No summary yet.</p>
+        )}
+      </div>
     </main>
   );
 }
