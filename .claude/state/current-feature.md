@@ -1,35 +1,16 @@
-# Current Feature: AI Auto-tag
+# Current Feature
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Complete -->
 
 ## Goals
 
-- Extend `lib/groq.ts` with a tagging function (e.g. `generateTags`) that
-  calls Groq's `chat/completions` endpoint with a tagging prompt
-- Add `POST /api/notes/[id]/tag`: loads the note, generates tags via Groq,
-  persists them to `Note.tags`, returns the updated note
-- 404 for a missing note, 400 for empty content
-- Map Groq failures (timeout, rate limit, malformed response) to a 502 with
-  a clear message, matching the existing `GroqApiError` pattern
-- Add a "Generate Tags" action to the note detail view
-  (`app/notes/[id]/NoteDetail.tsx`) alongside the existing Summarize action
-- Vitest coverage for the new Groq tagging function and the route's
-  status-code mapping
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- `Note.tags` already exists in `prisma/schema.prisma` (nullable) — no
-  migration needed
-- Stored as a single comma-separated string (SQLite has no native array
-  type) — join/split accordingly
-- Model: `llama-3.3-70b-versatile` (or current Groq free-tier equivalent)
-  per `.claude/config/project.config.md`
-- Regenerating tags overwrites the previous set (no history)
-- Scope to auto-tagging only — reuse summarization's Groq error-handling
-  conventions rather than modifying that feature's logic
-- Spec: `.claude/knowledge/features/ai-auto-tag.md`
+<!-- Additional context, constraints, or details from spec -->
 
 ## History
 
@@ -56,3 +37,19 @@ existing summary may go stale). Playwright MCP (`.mcp.json`) wired up for
 real-time UI verification in future feature work. Covered by 28 Vitest
 tests (Groq wrapper, `summarizeNote`, route status-code mapping). Spec:
 `.claude/knowledge/features/ai-note-summarization.md`.
+
+### AI Auto-tag (2026-07-13)
+
+Extended the Groq wrapper (`lib/groq.ts`) with `generateTags`, and
+`lib/notes.ts` with `tagNote`, mirroring the summarization feature's
+pattern. `POST /api/notes/[id]/tag` loads a note, generates tags via Groq,
+and persists them to `Note.tags` as a comma-separated string. 404 for a
+missing note, 400 for empty content, Groq failures mapped to a 502 via the
+existing `GroqApiError` handling. Note detail view gained a "Generate Tags"
+action alongside Summarize, with all four actions (Save/Delete/Summarize/
+Generate Tags) now cross-disabling on any in-flight state. Fixed the
+save-time staleness warning to also account for stale tags, not just a
+stale summary. Verified end-to-end against the live app via Playwright MCP
+(tag generation, persistence across reload, staleness-warning dialog).
+Covered by 15 new Vitest tests (54 total). Spec:
+`.claude/knowledge/features/ai-auto-tag.md`.
