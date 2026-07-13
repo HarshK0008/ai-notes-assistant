@@ -1,40 +1,12 @@
-# Current Feature: AI Note Summarization
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- [ ] Server-only Groq client wrapper (e.g. `lib/groq.ts`) that calls the
-      `chat/completions` endpoint with `GROQ_API_KEY`, never imported into a
-      client component
-- [ ] `POST /api/notes/[id]/summarize` route handler: loads the note, sends
-      its content to Groq with a summarization prompt, persists the result to
-      `Note.summary`, and returns the updated note
-- [ ] 404 if the note doesn't exist; validation error if content is empty
-- [ ] Handle Groq API failures gracefully (timeout, rate limit, malformed
-      response) — surface a clear error, don't crash the request
-- [ ] Note detail view (`app/notes/[id]/NoteDetail.tsx`) gets a "Summarize"
-      action that calls the route and displays `summary` once populated
-- [ ] Vitest coverage for the Groq wrapper (mocked HTTP) and the route's
-      status-code mapping, per the project's testing policy
-
 ## Notes
-
-- `Note.summary` already exists in `prisma/schema.prisma` (nullable) — no
-  migration needed, just start writing to it
-- Model: `llama-3.3-70b-versatile` (or current Groq free-tier equivalent) per
-  `.claude/config/project.config.md`
-- No `groq-sdk`/`openai` package is installed yet — add one (or call `fetch`
-  directly against Groq's OpenAI-compatible endpoint) as part of
-  implementation
-- `GROQ_API_KEY` must be added to `.env` (and documented in `.env.example`);
-  never commit `.env`
-- Keep this feature scoped to summarization only — auto-tagging (`tags`
-  field) is a separate follow-up feature, don't bundle it in here
-- Regenerating a summary should overwrite the previous one (no history)
-- Spec: `.claude/knowledge/features/ai-note-summarization.md`
 
 ## History
 
@@ -46,3 +18,18 @@ Server-side validation rejects empty title/content with 400; updating or
 deleting a missing note returns 404. Covered by 23 Vitest tests (CRUD logic
 + API route status-code mapping). Spec:
 `.claude/knowledge/features/note-management.md`.
+
+### AI Note Summarization (2026-07-13)
+
+Server-only Groq client wrapper (`lib/groq.ts`) and `POST
+/api/notes/[id]/summarize`, which loads a note, summarizes its content via
+Groq's `chat/completions` endpoint, and persists the result to
+`Note.summary`. 404 for a missing note, 400 for empty content, Groq failures
+(timeout, rate limit, malformed response) mapped to a 502 with a clear
+message. Note detail view gained a "Summarize" action, plus consistency
+fixes to its existing Save/Delete handlers (try/catch/finally error
+handling, cross-action button disabling, and a save-time warning when an
+existing summary may go stale). Playwright MCP (`.mcp.json`) wired up for
+real-time UI verification in future feature work. Covered by 28 Vitest
+tests (Groq wrapper, `summarizeNote`, route status-code mapping). Spec:
+`.claude/knowledge/features/ai-note-summarization.md`.
