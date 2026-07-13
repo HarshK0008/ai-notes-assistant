@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { summarizeText } from "@/lib/groq";
+import { generateTags, summarizeText } from "@/lib/groq";
 
 export class ValidationError extends Error {}
 export class NotFoundError extends Error {}
@@ -67,4 +67,19 @@ export async function summarizeNote(id: string) {
 
   const summary = await summarizeText(existing.content);
   return prisma.note.update({ where: { id }, data: { summary } });
+}
+
+export async function tagNote(id: string) {
+  const existing = await getNote(id);
+  if (!existing) {
+    throw new NotFoundError("Note not found");
+  }
+  if (!existing.content.trim()) {
+    // See summarizeNote's identical check: unreachable via createNote/updateNote,
+    // but content can be mutated out-of-band (e.g. Prisma Studio).
+    throw new ValidationError("Content is required");
+  }
+
+  const tags = await generateTags(existing.content);
+  return prisma.note.update({ where: { id }, data: { tags: tags.join(", ") } });
 }

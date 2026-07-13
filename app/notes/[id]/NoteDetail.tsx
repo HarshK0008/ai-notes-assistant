@@ -9,16 +9,18 @@ export function NoteDetail({ note }: { note: Note }) {
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
   const [summary, setSummary] = useState(note.summary);
+  const [tags, setTags] = useState(note.tags);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
+  const [tagging, setTagging] = useState(false);
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
 
-    if (summary && content !== note.content) {
+    if ((summary || tags) && content !== note.content) {
       const proceed = window.confirm(
-        "Saving will change this note's content. The existing summary won't update automatically and may no longer match. Continue?",
+        "Saving will change this note's content. The existing summary and/or tags won't update automatically and may no longer match. Continue?",
       );
       if (!proceed) {
         return;
@@ -96,13 +98,34 @@ export function NoteDetail({ note }: { note: Note }) {
     }
   }
 
+  async function handleGenerateTags() {
+    setTagging(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/notes/${note.id}/tag`, { method: "POST" });
+      const body = await response.json();
+
+      if (!response.ok) {
+        setError(body.error ?? "Something went wrong");
+        return;
+      }
+
+      setTags(body.tags);
+    } catch {
+      setError("Something went wrong");
+    } finally {
+      setTagging(false);
+    }
+  }
+
   return (
     <main>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Edit Note</h1>
         <button
           onClick={handleDelete}
-          disabled={submitting || summarizing}
+          disabled={submitting || summarizing || tagging}
           className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
           Delete
@@ -134,7 +157,7 @@ export function NoteDetail({ note }: { note: Note }) {
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
-          disabled={submitting || summarizing}
+          disabled={submitting || summarizing || tagging}
           className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
         >
           Save Changes
@@ -145,7 +168,7 @@ export function NoteDetail({ note }: { note: Note }) {
           <h2 className="text-sm font-medium">Summary</h2>
           <button
             onClick={handleSummarize}
-            disabled={summarizing || submitting}
+            disabled={summarizing || submitting || tagging}
             className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
           >
             {summarizing ? "Summarizing..." : "Summarize"}
@@ -155,6 +178,23 @@ export function NoteDetail({ note }: { note: Note }) {
           <p className="text-sm text-gray-700">{summary}</p>
         ) : (
           <p className="text-sm text-gray-400">No summary yet.</p>
+        )}
+      </div>
+      <div className="mt-6 border-t border-gray-200 pt-6">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-medium">Tags</h2>
+          <button
+            onClick={handleGenerateTags}
+            disabled={tagging || submitting || summarizing}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            {tagging ? "Generating..." : "Generate Tags"}
+          </button>
+        </div>
+        {tags ? (
+          <p className="text-sm text-gray-700">{tags}</p>
+        ) : (
+          <p className="text-sm text-gray-400">No tags yet.</p>
         )}
       </div>
     </main>

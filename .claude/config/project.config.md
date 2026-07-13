@@ -10,7 +10,7 @@ on its own — it asks, and a human decides.
 - **Type**: web app (full-stack)
 - **Purpose**: A small showcase app demonstrating the complete AI development workflow (idea → requirements → architecture → feature planning → implementation → testing → review → delivery). Lets a single user capture notes and get AI-generated summaries/tags for them.
 - **Current phase**: MVP
-- **Owner**: Varun Prashar
+- **Owner**: Harsh Kumar
 - **Created**: 2026-07-08
 
 ## Stack
@@ -54,6 +54,6 @@ on its own — it asks, and a human decides.
 
 ## Subagent Model Tiers & MCP Bindings
 
-| Agent | Model tier | MCP servers |
-|---|---|---|
-| code-reviewer | sonnet | none required |
+| Agent         | Model tier | MCP servers   |
+| ------------- | ---------- | ------------- |
+| code-reviewer | sonnet     | none required |

@@ -10,6 +10,7 @@ const mockNote = vi.hoisted(() => ({
 
 const mocks = vi.hoisted(() => ({
   summarizeText: vi.fn(),
+  generateTags: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -18,6 +19,7 @@ vi.mock("@/lib/prisma", () => ({
 
 vi.mock("@/lib/groq", () => ({
   summarizeText: mocks.summarizeText,
+  generateTags: mocks.generateTags,
 }));
 
 import {
@@ -27,6 +29,7 @@ import {
   listNotes,
   NotFoundError,
   summarizeNote,
+  tagNote,
   updateNote,
   validateNoteInput,
   ValidationError,
@@ -161,6 +164,43 @@ describe("summarizeNote", () => {
     mocks.summarizeText.mockRejectedValue(new Error("Groq API returned an error (status 429)"));
 
     await expect(summarizeNote("1")).rejects.toThrow("Groq API returned an error (status 429)");
+    expect(mockNote.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("tagNote", () => {
+  it("generates tags for the note content and persists them as a comma-separated string", async () => {
+    mockNote.findUnique.mockResolvedValue({ id: "1", content: "Some content" });
+    mocks.generateTags.mockResolvedValue(["groceries", "milk"]);
+    mockNote.update.mockResolvedValue({ id: "1", content: "Some content", tags: "groceries, milk" });
+
+    const result = await tagNote("1");
+
+    expect(mocks.generateTags).toHaveBeenCalledWith("Some content");
+    expect(mockNote.update).toHaveBeenCalledWith({
+      where: { id: "1" },
+      data: { tags: "groceries, milk" },
+    });
+    expect(result).toEqual({ id: "1", content: "Some content", tags: "groceries, milk" });
+  });
+
+  it("throws NotFoundError when the note doesn't exist", async () => {
+    mockNote.findUnique.mockResolvedValue(null);
+    await expect(tagNote("missing")).rejects.toThrow(NotFoundError);
+    expect(mocks.generateTags).not.toHaveBeenCalled();
+  });
+
+  it("throws ValidationError when the note has no content", async () => {
+    mockNote.findUnique.mockResolvedValue({ id: "1", content: "   " });
+    await expect(tagNote("1")).rejects.toThrow(ValidationError);
+    expect(mocks.generateTags).not.toHaveBeenCalled();
+  });
+
+  it("propagates errors from the Groq wrapper without persisting", async () => {
+    mockNote.findUnique.mockResolvedValue({ id: "1", content: "Some content" });
+    mocks.generateTags.mockRejectedValue(new Error("Groq API returned an error (status 429)"));
+
+    await expect(tagNote("1")).rejects.toThrow("Groq API returned an error (status 429)");
     expect(mockNote.update).not.toHaveBeenCalled();
   });
 });
